@@ -1,4 +1,4 @@
-# Desafio  - Integração IBGE 🚀
+# Desafio - Integração IBGE 🚀
 
 Solução em Python para enriquecimento de dados demográficos, sanitização de inputs e cálculo de estatísticas regionais via API do IBGE.
 
@@ -48,35 +48,3 @@ main.py: Código fonte principal.
 input.csv: Arquivo de entrada original.
 
 resultado.csv: Arquivo gerado com dados enriquecidos (Região, UF, ID IBGE).
-
-
----
-
-### 2. Texto para Colar na Entrega (Passo 9)
-
-[cite_start]O PDF pede para você "colar os artefatos ou o link"[cite: 224]. Como seu repo agora será público, cole este texto abaixo na caixa de resposta da prova. Ele é super profissional e já resume o que você fez:
-
-***
-
-**Repositório GitHub (Código + CSVs):**
-[COLE_O_LINK_DO_SEU_GITHUB_AQUI]
-
-**Conteúdo do Repositório:**
-* `main.py`: Código fonte em Python.
-* `input.csv`: Arquivo original.
-* `resultado.csv`: Arquivo final processado.
-* `README.md`: Instruções de execução.
-
-**Notas Explicativas - Decisões Técnicas:**
-
-1.  **Tratamento de Dados ("Santoo Andre"):**
-    O registro `Santoo Andre` foi identificado como uma duplicata inválida (ruído) e tratado como `NAO_ENCONTRADO`.
-    *Justificativa:* Corrigi-lo para "Santo Andre" duplicaria a contagem da população, invalidando a média estatística da região Sudeste.
-
-2.  **Resolução de Ambiguidade:**
-    Implementei um desempate lógico para homônimos (ex: Santo André SP vs PB), priorizando estados do Sul/Sudeste/DF, conforme o perfil dos dados apresentados.
-
-3.  **Correção de Typos:**
-    O código normaliza e corrige automaticamente entradas como `Curitba` e `Belo Horzionte`.
-
-***
