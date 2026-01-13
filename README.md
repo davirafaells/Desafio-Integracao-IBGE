@@ -1,3 +1,26 @@
+# Desafio Nasajon - Integração IBGE 🚀
+
+Solução em Python para processar dados demográficos, limpar inputs "sujos" e gerar estatísticas precisas cruzando com a API do IBGE.
+
+## 🛠️ O que precisas (Setup)
+
+Apenas Python 3 e a lib de requisições.
+
+```bash
+pip install requests
+⚡ Como Rodar
+Nada de hardcode. O código espera o token nas variáveis de ambiente.
+
+1. Configurar o Token Como estás no Windows, usa o comando abaixo para deixar salvo na sessão (importante: reinicia o terminal depois para ele pegar a variável):
+
+DOS
+
+setx ACCESS_TOKEN "COLE_AQUI_SEU_ACCESS_TOKEN"
+2. Executar o script
+
+Bash
+
+python main.py
 🧠 A Estratégia (Como cheguei ao Score 10)
 O diferencial deste código não é só consumir a API, é saber tratar os dados. Aqui estão as decisões lógicas para garantir a integridade das médias:
 
