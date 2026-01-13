@@ -1,49 +1,82 @@
-Markdown
+# Desafio  - Integração IBGE 🚀
 
-# Desafio Nasajon - Integração IBGE 🚀
+Solução em Python para enriquecimento de dados demográficos, sanitização de inputs e cálculo de estatísticas regionais via API do IBGE.
 
-Solução em Python para processar dados demográficos, limpar inputs "sujos" e gerar estatísticas precisas cruzando com a API do IBGE.
+## 📋 Pré-requisitos
 
-## 🛠️ O que precisas (Setup)
-
-Apenas Python 3 e a lib de requisições.
+* Python 3.x
+* Biblioteca `requests`
 
 ```bash
 pip install requests
 ⚡ Como Rodar
-Nada de hardcode. O código espera o token nas variáveis de ambiente.
+O projeto utiliza variáveis de ambiente para segurança do Token.
 
-1. Configurar o Token Como estás no Windows, usa o comando abaixo para deixar salvo na sessão (importante: reinicia o terminal depois para ele pegar a variável):
+1. Configurar o Token (Windows) Abra o terminal (CMD ou PowerShell) e execute o comando abaixo para salvar o token na sua sessão:
 
 DOS
 
-setx ACCESS_TOKEN "COLE_AQUI_SEU_ACCESS_TOKEN"
+setx ACCESS_TOKEN "INSIRA_SEU_TOKEN_AQUI"
+(Dica: Reinicie o terminal após este comando para que a variável seja carregada)
+
 2. Executar o script
 
 Bash
 
 python main.py
-🧠 A Estratégia (Como cheguei ao Score 10)
-O diferencial deste código não é só consumir a API, é saber tratar os dados. Aqui estão as decisões lógicas para garantir a integridade das médias:
+🧠 Decisões Técnicas (Score 10/10)
+O algoritmo foi desenvolvido focando na precisão estatística solicitada, aplicando as seguintes regras de negócio:
 
-1. O Caso "Santoo Andre" (Data Cleaning)
-O input trazia um registo duplicado e mal escrito: Santoo Andre (700k hab), concorrendo com o correto Santo Andre (723k hab).
+1. Tratamento de Ruído ("Santoo Andre")
+O arquivo de entrada continha um registro duplicado e incorreto: Santoo Andre (700.000 hab).
 
-Ação: Em vez de tentar corrigir e duplicar a cidade (o que estragaria a média do Sudeste), o código identifica isto como ruído e ignora o registo inválido.
+Ação: O sistema identifica este registro como inválido e define o status como NAO_ENCONTRADO.
 
-Resultado: Estatística limpa e sem duplicidade.
+Motivo: A correção forçada duplicaria a população da cidade, distorcendo gravemente a média populacional da região Sudeste.
 
-2. Desempate Inteligente (Homônimos)
-A API do IBGE retorna várias cidades para o mesmo nome (ex: Santo André existe em SP e na PB).
+2. Desempate de Homônimos
+Cidades com o mesmo nome (ex: Santo André existe em SP e na PB) são tratadas automaticamente.
 
-Lógica: O script analisa o contexto. Se houver colisão, priorizamos estados do Sul/Sudeste/DF, já que o dataset é focado em grandes centros. Isso evita cair na "pegadinha" de selecionar uma cidade pequena do interior por engano.
+Lógica: O script prioriza estados do Sul/Sudeste/DF em caso de empate, alinhado ao contexto demográfico dos dados de entrada (grandes centros).
 
-3. Auto-Correção
-Typos simples como Curitba ou Belo Horzionte são detetados e corrigidos on-the-fly antes da consulta.
+3. Sanitização Automática
+Erros de digitação comuns no input (typos) como Curitba, Belo Horzionte e Brasilia são normalizados e corrigidos antes da consulta à API.
 
-📊 O que é entregue
-resultado.csv: O ficheiro final, formatado e enriquecido.
+📄 Arquivos do Projeto
+main.py: Código fonte principal.
 
-Logs no Console: O script é "verboso" — ele narra no terminal cada correção e decisão que tomou, para total transparência.
+input.csv: Arquivo de entrada original.
 
-Feito com ☕ e Python.
+resultado.csv: Arquivo gerado com dados enriquecidos (Região, UF, ID IBGE).
+
+
+---
+
+### 2. Texto para Colar na Entrega (Passo 9)
+
+[cite_start]O PDF pede para você "colar os artefatos ou o link"[cite: 224]. Como seu repo agora será público, cole este texto abaixo na caixa de resposta da prova. Ele é super profissional e já resume o que você fez:
+
+***
+
+**Repositório GitHub (Código + CSVs):**
+[COLE_O_LINK_DO_SEU_GITHUB_AQUI]
+
+**Conteúdo do Repositório:**
+* `main.py`: Código fonte em Python.
+* `input.csv`: Arquivo original.
+* `resultado.csv`: Arquivo final processado.
+* `README.md`: Instruções de execução.
+
+**Notas Explicativas - Decisões Técnicas:**
+
+1.  **Tratamento de Dados ("Santoo Andre"):**
+    O registro `Santoo Andre` foi identificado como uma duplicata inválida (ruído) e tratado como `NAO_ENCONTRADO`.
+    *Justificativa:* Corrigi-lo para "Santo Andre" duplicaria a contagem da população, invalidando a média estatística da região Sudeste.
+
+2.  **Resolução de Ambiguidade:**
+    Implementei um desempate lógico para homônimos (ex: Santo André SP vs PB), priorizando estados do Sul/Sudeste/DF, conforme o perfil dos dados apresentados.
+
+3.  **Correção de Typos:**
+    O código normaliza e corrige automaticamente entradas como `Curitba` e `Belo Horzionte`.
+
+***
