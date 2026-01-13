@@ -1,3 +1,5 @@
+Markdown
+
 # Desafio Nasajon - Integração IBGE 🚀
 
 Solução em Python para processar dados demográficos, limpar inputs "sujos" e gerar estatísticas precisas cruzando com a API do IBGE.
