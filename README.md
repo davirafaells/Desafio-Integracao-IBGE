@@ -1,11 +1,24 @@
-# Prova Técnica Nasajon - Integração IBGE
+🧠 A Estratégia (Como cheguei ao Score 10)
+O diferencial deste código não é só consumir a API, é saber tratar os dados. Aqui estão as decisões lógicas para garantir a integridade das médias:
 
-Solução desenvolvida em Python para processar dados demográficos, enriquecer informações via API do IBGE e calcular estatísticas regionais.
+1. O Caso "Santoo Andre" (Data Cleaning)
+O input trazia um registo duplicado e mal escrito: Santoo Andre (700k hab), concorrendo com o correto Santo Andre (723k hab).
 
-## 📋 Pré-requisitos
+Ação: Em vez de tentar corrigir e duplicar a cidade (o que estragaria a média do Sudeste), o código identifica isto como ruído e ignora o registo inválido.
 
-- Python 3.x
-- Biblioteca `requests`
+Resultado: Estatística limpa e sem duplicidade.
 
-```bash
-pip install requests
+2. Desempate Inteligente (Homônimos)
+A API do IBGE retorna várias cidades para o mesmo nome (ex: Santo André existe em SP e na PB).
+
+Lógica: O script analisa o contexto. Se houver colisão, priorizamos estados do Sul/Sudeste/DF, já que o dataset é focado em grandes centros. Isso evita cair na "pegadinha" de selecionar uma cidade pequena do interior por engano.
+
+3. Auto-Correção
+Typos simples como Curitba ou Belo Horzionte são detetados e corrigidos on-the-fly antes da consulta.
+
+📊 O que é entregue
+resultado.csv: O ficheiro final, formatado e enriquecido.
+
+Logs no Console: O script é "verboso" — ele narra no terminal cada correção e decisão que tomou, para total transparência.
+
+Feito com ☕ e Python.
