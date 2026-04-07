@@ -4,17 +4,15 @@ import json
 import requests
 import unicodedata
 
-# --- Configurações ---
+# --- Configurações Gerais ---
 URL_IBGE = "https://servicodados.ibge.gov.br/api/v1/localidades/municipios"
-URL_API_NASAJON = "https://mynxlubykylncinttggu.functions.supabase.co/ibge-submit"
+# URL alterada para uma variável de ambiente ou endpoint genérico
+URL_DESTINO = os.getenv("API_ENDPOINT_DESTINO", "https://api.exemplo.com/v1/submit")
 
 # Lista de prioridade para resolver cidades com mesmo nome (homônimos).
-# O dataset foca em grandes centros/sudeste, então priorizamos esses estados.
 UFS_PRIORIDADE = ['SP', 'RJ', 'MG', 'ES', 'PR', 'SC', 'RS', 'DF']
 
-# Correções pontuais para erros de digitação.
-# OBS: "Santoo Andre" foi removido propositalmente para ser tratado como 
-# registro inválido/duplicado e não sujar a média.
+# Correções pontuais para erros de digitação comuns no dataset.
 CORRECOES = {
     "belo horzionte": "belo horizonte",
     "curitba": "curitiba",
@@ -23,29 +21,28 @@ CORRECOES = {
 }
 
 def normalizar(texto):
-    """Remove acentos e espaços para comparação."""
+    """Remove acentos e espaços para comparação uniforme."""
     if not texto: return ""
     return "".join([c for c in unicodedata.normalize('NFKD', texto) if not unicodedata.combining(c)]).lower().strip()
 
 def get_token():
-    token = os.getenv("ACCESS_TOKEN")
+    """Recupera o token de autenticação de forma segura."""
+    token = os.getenv("AUTH_TOKEN")
     if not token:
-        print("Erro: Variável ACCESS_TOKEN não definida.")
-        print("Defina a variável no terminal antes de rodar o script.")
+        print("Erro: Variável AUTH_TOKEN não definida nas variáveis de ambiente.")
         exit(1)
     return token
 
-# --- Início da Execução ---
-print("\n>>> Iniciando integração IBGE <-> Nasajon")
+# --- Fluxo de Processamento ---
+print("\n>>> Iniciando Processamento de Dados Geográficos")
 
-# 1. Carregar base do IBGE
-print("[1/4] Carregando municípios do IBGE...")
+# 1. Carregar base de referência (IBGE)
+print("[1/4] Sincronizando base de dados governamental...")
 try:
     resp = requests.get(URL_IBGE)
     lista_ibge = resp.json()
     
-    # Indexa os municípios pelo nome normalizado.
-    # Como podem existir nomes repetidos, o valor é uma lista de cidades.
+    # Indexação para busca rápida
     mapa_cidades = {}
     for item in lista_ibge:
         nome_norm = normalizar(item['nome'])
@@ -53,21 +50,21 @@ try:
             mapa_cidades[nome_norm] = []
         mapa_cidades[nome_norm].append(item)
         
-    print(f"      Base carregada: {len(lista_ibge)} registros processados.")
+    print(f"      Base carregada: {len(lista_ibge)} registros mapeados.")
 
 except Exception as e:
-    print(f"Erro fatal ao acessar IBGE: {e}")
+    print(f"Erro ao acessar base de referência: {e}")
     exit(1)
 
-# 2. Processar arquivo de entrada
-print("[2/4] Processando input.csv...")
+# 2. Processar arquivo local
+print("[2/4] Lendo arquivo de entrada (input.csv)...")
 
 stats = {
     "total_municipios": 0, "total_ok": 0, "total_nao_encontrado": 0,
     "total_erro_api": 0, "pop_total_ok": 0, "medias_por_regiao": {}
 }
 dados_saida = []
-acumulador_regiao = {} # { "Sudeste": [pop1, pop2], ... }
+acumulador_regiao = {} 
 
 try:
     with open('input.csv', 'r', encoding='utf-8') as f:
@@ -79,10 +76,8 @@ try:
             nome_orig = row['municipio'].strip()
             pop = int(row['populacao'].strip())
             
-            # Normalização e verificação de typos
             nome_busca = normalizar(nome_orig)
             if nome_busca in CORRECOES:
-                print(f"      [Correção] '{nome_orig}' ajustado para '{CORRECOES[nome_busca]}'")
                 nome_busca = CORRECOES[nome_busca]
             
             match = None
@@ -92,21 +87,14 @@ try:
                 if len(candidatos) == 1:
                     match = candidatos[0]
                 else:
-                    # Resolve ambiguidade (Ex: Santo Andre SP vs PB)
-                    # Tenta encontrar a cidade nos estados prioritários
+                    # Lógica de desempate por região prioritária
                     match_prioritario = next((c for c in candidatos if c['microrregiao']['mesorregiao']['UF']['sigla'] in UFS_PRIORIDADE), None)
-                    
-                    if match_prioritario:
-                        match = match_prioritario
-                    else:
-                        match = candidatos[0] # Fallback para o primeiro encontrado
-                        print(f"      [Aviso] Ambiguidade em '{nome_orig}' resolvida pelo primeiro registro.")
-
-            # Monta objeto de saída
+                    match = match_prioritario if match_prioritario else candidatos[0]
+            
             item_out = {
                 "municipio_input": nome_orig, "populacao_input": pop,
-                "status": "NAO_ENCONTRADO", "municipio_ibge": None, 
-                "uf": None, "regiao": None, "id_ibge": None
+                "status": "NAO_ENCONTRADO", "municipio_ref": None, 
+                "uf": None, "regiao": None, "id_externo": None
             }
             
             if match:
@@ -114,8 +102,8 @@ try:
                 stats["pop_total_ok"] += pop
                 
                 item_out["status"] = "OK"
-                item_out["municipio_ibge"] = match['nome']
-                item_out["id_ibge"] = match['id']
+                item_out["municipio_ref"] = match['nome']
+                item_out["id_externo"] = match['id']
                 item_out["uf"] = match['microrregiao']['mesorregiao']['UF']['sigla']
                 
                 regiao = match['microrregiao']['mesorregiao']['UF']['regiao']['nome']
@@ -125,41 +113,40 @@ try:
                 acumulador_regiao[regiao].append(pop)
             else:
                 stats["total_nao_encontrado"] += 1
-                print(f"      [Ignorado] '{nome_orig}' não localizado na base ou considerado duplicata.")
             
             dados_saida.append(item_out)
 
 except FileNotFoundError:
-    print("Erro: Arquivo input.csv não encontrado.")
+    print("Erro: Arquivo 'input.csv' não encontrado.")
     exit(1)
 
-# 3. Consolidação e Resultados
-print("[3/4] Gerando estatísticas...")
+# 3. Consolidação de Estatísticas
+print("[3/4] Consolidando métricas por região...")
 
 for regiao, lista_pops in acumulador_regiao.items():
     if lista_pops:
         media = sum(lista_pops) / len(lista_pops)
         stats["medias_por_regiao"][regiao] = round(media, 2)
 
-# Exibe resumo no console para conferência
-print("\n" + "-"*30)
-print("RESUMO DOS CÁLCULOS:")
-print(f"Total Processado: {stats['total_municipios']}")
-print(f"Itens Válidos:    {stats['total_ok']}")
-print(f"Itens Ignorados:  {stats['total_nao_encontrado']}")
-print("Médias Calculadas:")
+# Resumo para auditoria
+print("\n" + "="*40)
+print("RELATÓRIO DE PROCESSAMENTO:")
+print(f"Total de registros: {stats['total_municipios']}")
+print(f"Sucesso:           {stats['total_ok']}")
+print(f"Falhas/Ignorados:  {stats['total_nao_encontrado']}")
+print("Médias de População:")
 for reg, val in stats["medias_por_regiao"].items():
     print(f"  > {reg}: {val:,.2f}")
-print("-"*30 + "\n")
+print("="*40 + "\n")
 
-# Salva CSV
-with open('resultado.csv', 'w', encoding='utf-8', newline='') as f:
+# Salva arquivo de auditoria local
+with open('resultado_processamento.csv', 'w', encoding='utf-8', newline='') as f:
     writer = csv.DictWriter(f, fieldnames=dados_saida[0].keys())
     writer.writeheader()
     writer.writerows(dados_saida)
 
-# 4. Envio para API
-print("[4/4] Enviando dados para avaliação...")
+# 4. Exportação dos Resultados
+print("[4/4] Enviando dados para o servidor de destino...")
 token = get_token()
 
 try:
@@ -167,16 +154,14 @@ try:
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
     }
-    response = requests.post(URL_API_NASAJON, headers=headers, json={"stats": stats})
+    # Envia os dados consolidados para a API configurada
+    response = requests.post(URL_DESTINO, headers=headers, json={"data_summary": stats})
     
-    print("\n==============================")
-    if response.status_code == 200:
-        retorno = response.json()
-        print(f"SUCESSO! Score Recebido: {retorno.get('score')}")
-        print(f"Feedback: {retorno.get('feedback')}")
+    if response.status_code in [200, 201]:
+        print("Sincronização concluída com sucesso!")
+        print(f"Resposta do Servidor: {response.text}")
     else:
-        print(f"ERRO API ({response.status_code}): {response.text}")
-    print("==============================\n")
+        print(f"Aviso: O servidor retornou status {response.status_code}")
 
 except Exception as e:
-    print(f"Erro de conexão: {e}")
+    print(f"Erro na comunicação com o servidor: {e}")
